@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Forms;
+using CanvasPoint = System.Drawing.Point;
 
 namespace GJK {
     public partial class Form1 : Form {
@@ -17,20 +19,20 @@ namespace GJK {
         public bool creating = false;
         public bool moving = false;
         public Polyline moving_obj;
-        Point last_move_position;
+        CanvasPoint last_move_position;
 
         public class Polyline {
-            public List<Point> points;
+            public List<CanvasPoint> points;
             public Color color;
             public bool finished;
 
-            public Polyline(List<Point> p, Color c, bool f) {
+            public Polyline(List<CanvasPoint> p, Color c, bool f) {
                 points = p;
                 color = c;
                 finished = f;
             }
             public Polyline() {
-                points = new List<Point>();
+                points = new List<CanvasPoint>();
                 color = Color.Black;
                 finished = false;
             }
@@ -42,24 +44,24 @@ namespace GJK {
                 }
                 else {
                     if (points.Count > 1) {
-                        foreach (Point point in points) {
+                        foreach (CanvasPoint point in points) {
                             g.DrawLines(new Pen(color, 3), points.ToArray());
                         }
                     }
                 }
-                foreach (Point point in points) {
+                foreach (CanvasPoint point in points) {
                     g.FillEllipse(new SolidBrush(Color.Red), new Rectangle(point.X - 5, point.Y - 5, 10, 10));
                 }
             }
 
             public void Move(int x, int y) {
                 for (int i = 0; i < points.Count(); i++) {
-                    Point new_point = new Point(points[i].X - x, points[i].Y - y);
+                    CanvasPoint new_point = new CanvasPoint(points[i].X - x, points[i].Y - y);
                     points[i] = new_point;
                 }
             }
 
-            public void Add(Point p) {
+            public void Add(CanvasPoint p) {
                 points.Add(p);
             }
         }
@@ -92,7 +94,7 @@ namespace GJK {
                 else { // add position to polyline
                     var values = line.Split(' ').Select(Int32.Parse).ToList();
                     Polyline polyline = objects.Last();
-                    polyline.Add(new Point(values.First(), values.Last()));
+                    polyline.Add(new CanvasPoint(values.First(), values.Last()));
                 }
             }
             Invalidate();
@@ -120,7 +122,7 @@ namespace GJK {
                     objects.Add(new Polyline());
                 }
                 Polyline obj = objects.Last();
-                obj.Add(new Point(e.X, e.Y));
+                obj.Add(new CanvasPoint(e.X, e.Y));
                 Invalidate();
             }
         }
@@ -143,7 +145,7 @@ namespace GJK {
             using (FileStream fs = File.Open(objects_file, FileMode.Create)) {
                 foreach (Polyline polyline in objects) {
                     string data = "";
-                    foreach (Point point in polyline.points) {
+                    foreach (CanvasPoint point in polyline.points) {
                         data += point.X + " " + point.Y + Environment.NewLine;
                     }
                     data += Environment.NewLine;
@@ -174,7 +176,7 @@ namespace GJK {
                 if (IsPointInPolygon(Array.ConvertAll(polyline.points.ToArray(), item => (PointF)item), new PointF(e.X, e.Y))) {
                     moving_obj = polyline;
                     moving = true;
-                    last_move_position = new Point(e.X, e.Y);
+                    last_move_position = new CanvasPoint(e.X, e.Y);
                 }
             }
         }
@@ -195,8 +197,42 @@ namespace GJK {
             }
         }
 
-        //public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
-        //    return null;
-        //}
+        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
+            return new Vector();
+        }
+
+        public Vector ClosestPoint(Simplex W) {  // TODO test
+            Vector d = new Vector();
+            if (W.count >= 2) {
+                d = W.B.vec - W.A.vec;
+            }
+            double n = 0;
+            if (W.count == 3) {
+                n = (W.B.vec - W.A.vec) * (W.C.vec - W.A.vec);
+            }
+            switch (W.count) {
+                case 0:
+                    return new Vector(0, 0);
+                case 1:
+                    return W.A.vec;
+                case 2:
+                    return W.A.vec - (((d * W.A.vec) / (d * d)) * d);
+                case 3:
+                    return ((n * W.A.vec) / (n * n)) * n;
+            }
+            return new Vector(0, 0);
+        }
+    }
+
+    public class Simplex {
+        public SimplexVertex A;
+        public SimplexVertex B;
+        public SimplexVertex C;
+        public int count;
+    }
+
+    public class SimplexVertex {
+        public Vector vec;
+        public int index;
     }
 }
