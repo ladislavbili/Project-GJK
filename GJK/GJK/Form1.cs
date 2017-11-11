@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
-using CanvasPoint = System.Drawing.Point;
+using CanvasPoint = System.Drawing.PointF;
 
 namespace GJK {
     public partial class Form1 : Form {
@@ -20,6 +22,10 @@ namespace GJK {
         public bool moving = false;
         public Polyline moving_obj;
         CanvasPoint last_move_position;
+
+        public bool rotating = false;
+        public Polyline rotating_obj;
+        CanvasPoint last_rotate_click;
 
         public class Polyline {
             public List<CanvasPoint> points;
@@ -50,7 +56,7 @@ namespace GJK {
                     }
                 }
                 foreach (CanvasPoint point in points) {
-                    g.FillEllipse(new SolidBrush(Color.Red), new Rectangle(point.X - 5, point.Y - 5, 10, 10));
+                    g.FillEllipse(new SolidBrush(Color.Red), new Rectangle((int)Math.Round(point.X) - 5, (int)Math.Round(point.Y) - 5, 10, 10));
                 }
             }
 
@@ -59,6 +65,26 @@ namespace GJK {
                     CanvasPoint new_point = new CanvasPoint(points[i].X - x, points[i].Y - y);
                     points[i] = new_point;
                 }
+            }
+
+            public CanvasPoint GetCenter() {
+                int totalX = 0;
+                int totalY = 0;
+                foreach (CanvasPoint p in points) {
+                    totalX += (int)Math.Round(p.X);
+                    totalY += (int)Math.Round(p.Y);
+                }
+                int centerX = totalX / points.Count;
+                int centerY = totalY / points.Count;
+                return new CanvasPoint(centerX, centerY);
+            }
+
+            public void Rotate(double angle) {
+                Matrix myMatrix = new Matrix();
+                myMatrix.RotateAt((float)angle, GetCenter());
+                CanvasPoint[] p = points.ToArray();
+                myMatrix.TransformPoints(p);
+                points = p.ToList();
             }
 
             public void Add(CanvasPoint p) {
@@ -101,6 +127,7 @@ namespace GJK {
         }
 
         private void Form1_Paint(object sender, PaintEventArgs e) {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             foreach (Polyline polyline in objects) {
                 polyline.Draw(e.Graphics);
             }
@@ -109,7 +136,7 @@ namespace GJK {
         private void create_objects_btn_Click(object sender, EventArgs e) {
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
-            finish_object_btn.Enabled = true;
+            finish_object_btn.Enabled = false;
             creating = true;
         }
 
@@ -123,6 +150,12 @@ namespace GJK {
                 }
                 Polyline obj = objects.Last();
                 obj.Add(new CanvasPoint(e.X, e.Y));
+                if (obj.points.Count > 2) {
+                    finish_object_btn.Enabled = true;
+                }
+                else {
+                    finish_object_btn.Enabled = false;
+                }
                 Invalidate();
             }
         }
@@ -131,13 +164,14 @@ namespace GJK {
             objects.Last().finished = true;
             if (objects.Count == 2) {
                 creating = false;
-                finish_object_btn.Enabled = false;
+                
+                save_objects_btn.Enabled = true;
             }
             else {
                 objects.Add(new Polyline());
             }
-            save_objects_btn.Enabled = true;
             Invalidate();
+            finish_object_btn.Enabled = false;
         }
 
         private void save_objects_btn_Click(object sender, EventArgs e) {
@@ -172,36 +206,68 @@ namespace GJK {
         private void Form1_MouseDown(object sender, MouseEventArgs e) {
             moving = false;
             moving_obj = null;
+            rotating = false;
+            rotating_obj = null;
             foreach (Polyline polyline in objects) {
                 if (IsPointInPolygon(Array.ConvertAll(polyline.points.ToArray(), item => (PointF)item), new PointF(e.X, e.Y))) {
-                    moving_obj = polyline;
-                    moving = true;
-                    last_move_position = new CanvasPoint(e.X, e.Y);
+                    if (e.Button == MouseButtons.Left) {
+                        moving_obj = polyline;
+                        moving = true;
+                        last_move_position = new CanvasPoint(e.X, e.Y);
+                    }
+                    else if (e.Button == MouseButtons.Right) {
+                        rotating_obj = polyline;
+                        rotating = true;
+                        last_rotate_click = new CanvasPoint(e.X, e.Y);
+                    }
+
                 }
             }
         }
 
         private void Form1_MouseUp(object sender, MouseEventArgs e) {
-            moving = false;
-            moving_obj = null;
+            if (moving) {
+                moving = false;
+                moving_obj = null;
+            }
+            else if (rotating) {
+                rotating = false;
+                rotating_obj = null;
+            }
+
         }
 
         private void Form1_MouseMove(object sender, MouseEventArgs e) {
             if (moving) {
-                int x_diff = last_move_position.X - e.X;
-                int y_diff = last_move_position.Y - e.Y;
+                int x_diff = (int)Math.Round(last_move_position.X) - e.X;
+                int y_diff = (int)Math.Round(last_move_position.Y) - e.Y;
                 last_move_position.X = e.X;
                 last_move_position.Y = e.Y;
                 moving_obj.Move(x_diff, y_diff);
-                Invalidate();
             }
+            else if (rotating) {
+                CanvasPoint sp = new CanvasPoint(last_rotate_click.X, last_rotate_click.Y);
+                CanvasPoint mp = new CanvasPoint(rotating_obj.GetCenter().X, rotating_obj.GetCenter().Y);
+                CanvasPoint p = new CanvasPoint(e.X, e.Y);
+
+                double sAngle = Math.Atan2((sp.Y - mp.Y), (sp.X - mp.X));
+                double pAngle = Math.Atan2((p.Y - mp.Y), (p.X - mp.X));
+
+                last_rotate_click.X = e.X;
+                last_rotate_click.Y = e.Y;
+
+                double angle = (pAngle - sAngle) * 180 / Math.PI; ;
+                Debug.WriteLine(angle);
+                rotating_obj.Rotate(angle);
+            }
+            Invalidate();
         }
 
         public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
             return new Vector();
         }
 
-        public Vector ClosestPoint(Simplex W) {  // TODO test
+        public Vector ClosestPoint(Simplex W) {
             Vector d = new Vector();
             if (W.count >= 2) {
                 d = W.B.vec - W.A.vec;
@@ -217,7 +283,7 @@ namespace GJK {
                     return W.A.vec;
                 case 2:
                     return W.A.vec - (((d * W.A.vec) / (d * d)) * d);
-                case 3:
+                case 3: // Dont use this...
                     return ((n * W.A.vec) / (n * n)) * n;
             }
             return new Vector(0, 0);
