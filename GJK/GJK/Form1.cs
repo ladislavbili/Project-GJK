@@ -131,6 +131,11 @@ namespace GJK {
             foreach (Polyline polyline in objects) {
                 polyline.Draw(e.Graphics);
             }
+            if (objects.Count == 2) { // TODO spojit najblizsie body
+                CanvasPoint a = objects[0].points[0];
+                CanvasPoint b = objects[1].points[0];
+                connectPoints(e.Graphics, a, b);
+            }
         }
 
         private void create_objects_btn_Click(object sender, EventArgs e) {
@@ -261,6 +266,14 @@ namespace GJK {
                 rotating_obj.Rotate(angle);
             }
             Invalidate();
+        }
+
+        private void connectPoints(Graphics g, CanvasPoint a, CanvasPoint b) {
+            Pen p = new Pen(Color.Green, 3);
+            p.DashStyle = DashStyle.Dash;
+            g.DrawLine(p, a, b);
+            g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(a.X) - 5, (int)Math.Round(a.Y) - 5, 10, 10));
+            g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(b.X) - 5, (int)Math.Round(b.Y) - 5, 10, 10));
         }
 
         public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
