@@ -276,7 +276,7 @@ namespace GJK {
             g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(b.X) - 5, (int)Math.Round(b.Y) - 5, 10, 10));
         }
 
-        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
+        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {  // TODO
             return new Vector();
         }
 
@@ -300,6 +300,14 @@ namespace GJK {
                     return ((n * W.A.vec) / (n * n)) * n;
             }
             return new Vector(0, 0);
+        }
+
+        public Vector SupportHC(Polyline A, Vector d, SimplexVertex w) {  // TODO
+            return new Vector();
+        }
+
+        public Tuple<Simplex, Vector> BestSiplex(Simplex W, Vector w) {  //TODO
+            return new Tuple<Simplex, Vector>(new Simplex(), new Vector());
         }
     }
 
