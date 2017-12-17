@@ -16,20 +16,60 @@ using CanvasPoint = System.Drawing.PointF;
 namespace GJK {
     public partial class Form1 : Form {
 
+        /// <summary>
+        /// Path to file containing definitions of objects as lines of pairs of points
+        /// </summary>
         public const string objects_file = "objects.txt";
+        /// <summary>
+        /// List of interacitive objects in form of polylines created from objects defined in <see cref="objects_file"/>
+        /// </summary>
         public List<Polyline> objects = new List<Polyline>();
+        /// <summary>
+        /// If true, then app is in state of creating new objects using click events
+        /// </summary>
         public bool creating = false;
+        /// <summary>
+        /// If true, then app is in state of moving clicked object
+        /// </summary>
         public bool moving = false;
+        /// <summary>
+        /// Currently clicked objects.
+        /// </summary>
         public Polyline moving_obj;
+        /// <summary>
+        /// last position of objects' point, used for moving of objects
+        /// </summary>
         CanvasPoint last_move_position;
 
+
+        /// <summary>
+        /// If true, then app is in state of rotating objects using click events
+        /// </summary>
         public bool rotating = false;
+        /// <summary>
+        /// Currently clicked objects.
+        /// </summary>
         public Polyline rotating_obj;
+        /// <summary>
+        /// Last position of objects' point, used for rotation of objects
+        /// </summary>
         CanvasPoint last_rotate_click;
 
+        /// <summary>
+        /// Class defining objects in form of list of points
+        /// </summary>
         public class Polyline {
+            /// <summary>
+            /// List of points that comprise the objects
+            /// </summary>
             public List<CanvasPoint> points;
+            /// <summary>
+            /// Color used to fill objects if it finised <see cref="finished"/>
+            /// </summary>
             public Color color;
+            /// <summary>
+            /// Defines wheter the creation of object is finished, if yes, then last point will be connected with first when drawn.
+            /// </summary>
             public bool finished;
 
             public Polyline(List<CanvasPoint> p, Color c, bool f) {
@@ -43,6 +83,10 @@ namespace GJK {
                 finished = false;
             }
 
+            /// <summary>
+            /// Draws object onto canvas. Filled with <see cref="color"/> and with last and first point connected if <see cref="finished"/> 
+            /// </summary>
+            /// <param name="g"></param>
             public void Draw(Graphics g) {
                 if (finished) {
                     g.DrawPolygon(new Pen(color, 3), points.ToArray());
@@ -60,6 +104,11 @@ namespace GJK {
                 }
             }
 
+            /// <summary>
+            /// Moves each point of object by <paramref name="x"/> and <paramref name="y"/>
+            /// </summary>
+            /// <param name="x"></param>
+            /// <param name="y"></param>
             public void Move(int x, int y) {
                 for (int i = 0; i < points.Count(); i++) {
                     CanvasPoint new_point = new CanvasPoint(points[i].X - x, points[i].Y - y);
@@ -67,6 +116,10 @@ namespace GJK {
                 }
             }
 
+            /// <summary>
+            /// Finds center of object.
+            /// </summary>
+            /// <returns>Center of object.</returns>
             public CanvasPoint GetCenter() {
                 int totalX = 0;
                 int totalY = 0;
@@ -79,6 +132,10 @@ namespace GJK {
                 return new CanvasPoint(centerX, centerY);
             }
 
+            /// <summary>
+            /// Rotates object by <paramref name="angle"/> (moves each point).
+            /// </summary>
+            /// <param name="angle"></param>
             public void Rotate(double angle) {
                 Matrix myMatrix = new Matrix();
                 myMatrix.RotateAt((float)angle, GetCenter());
@@ -87,6 +144,10 @@ namespace GJK {
                 points = p.ToList();
             }
 
+            /// <summary>
+            /// Adds new point to unfinished object.
+            /// </summary>
+            /// <param name="p"></param>
             public void Add(CanvasPoint p) {
                 points.Add(p);
             }
@@ -97,12 +158,22 @@ namespace GJK {
             this.DoubleBuffered = true;
         }
 
+        /// <summary>
+        /// Upon form load event: checks whether objects are available to be loaded
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_Load(object sender, EventArgs e) {
             if (!File.Exists(objects_file) || new FileInfo(objects_file).Length == 0) {
                 load_objects_btn.Enabled = false;
             }
         }
 
+        /// <summary>
+        /// When <see cref="load_objects_btn"/> is clicked, loads objects present in <see cref="objects_file"/>
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void load_objects_btn_Click(object sender, EventArgs e) {  // TODO test
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
@@ -126,6 +197,11 @@ namespace GJK {
             Invalidate();
         }
 
+        /// <summary>
+        /// Draws all objects onto canvas.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_Paint(object sender, PaintEventArgs e) {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             foreach (Polyline polyline in objects) {
@@ -138,6 +214,11 @@ namespace GJK {
             }
         }
 
+        /// <summary>
+        /// Changes state to object creation.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void create_objects_btn_Click(object sender, EventArgs e) {
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
@@ -148,6 +229,12 @@ namespace GJK {
         private void Form1_Click(object sender, EventArgs e) {
         }
 
+
+        /// <summary>
+        /// If in creating mode: adds new point to current object.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_MouseClick(object sender, MouseEventArgs e) {
             if (creating) {
                 if (objects.Count == 0) {
@@ -165,6 +252,11 @@ namespace GJK {
             }
         }
 
+        /// <summary>
+        /// When <see cref="finish_object_btn"/> is clicked: sets current object and as finished and redraws canvas.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void finish_object_btn_Click(object sender, EventArgs e) {
             objects.Last().finished = true;
             if (objects.Count == 2) {
@@ -179,6 +271,12 @@ namespace GJK {
             finish_object_btn.Enabled = false;
         }
 
+
+        /// <summary>
+        /// When <see cref="save_objects_btn"/> is clicked: saves created objects to <see cref="objects_file"/> in form of lines of pairs
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void save_objects_btn_Click(object sender, EventArgs e) {
             save_objects_btn.Enabled = false;
             using (FileStream fs = File.Open(objects_file, FileMode.Create)) {
@@ -194,6 +292,13 @@ namespace GJK {
             }
         }
 
+
+        /// <summary>
+        /// Checks whether <paramref name="testPoint"/> is in <paramref name="polygon"/>.
+        /// </summary>
+        /// <param name="polygon"></param>
+        /// <param name="testPoint"></param>
+        /// <returns></returns>
         public static bool IsPointInPolygon(PointF[] polygon, PointF testPoint) {
             bool result = false;
             int j = polygon.Count() - 1;
@@ -208,6 +313,11 @@ namespace GJK {
             return result;
         }
 
+        /// <summary>
+        /// Prepares for moving or rotating events based on mouse button that was used.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_MouseDown(object sender, MouseEventArgs e) {
             moving = false;
             moving_obj = null;
@@ -230,6 +340,11 @@ namespace GJK {
             }
         }
 
+        /// <summary>
+        /// Finishes move of rotation event.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_MouseUp(object sender, MouseEventArgs e) {
             if (moving) {
                 moving = false;
@@ -242,6 +357,11 @@ namespace GJK {
 
         }
 
+        /// <summary>
+        /// Moves or rotates clicked object, based on mouse button that is being pressed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Form1_MouseMove(object sender, MouseEventArgs e) {
             if (moving) {
                 int x_diff = (int)Math.Round(last_move_position.X) - e.X;
@@ -268,6 +388,12 @@ namespace GJK {
             Invalidate();
         }
 
+        /// <summary>
+        /// Draws dotted line between <paramref name="a"/> and <paramref name="b"/>, used for drawing of closest points.
+        /// </summary>
+        /// <param name="g"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
         private void connectPoints(Graphics g, CanvasPoint a, CanvasPoint b) {
             Pen p = new Pen(Color.Green, 3);
             p.DashStyle = DashStyle.Dash;
@@ -276,10 +402,22 @@ namespace GJK {
             g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(b.X) - 5, (int)Math.Round(b.Y) - 5, 10, 10));
         }
 
+        /// <summary>
+        /// Checks for colision between <paramref name="A"/> and <paramref name="B"/>
+        /// </summary>
+        /// <param name="A">Convex object</param>
+        /// <param name="B">Convex object</param>
+        /// <param name="W">Initial simplex</param>
+        /// <returns>touching vector</returns>
         public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {  // TODO
             return new Vector();
         }
 
+        /// <summary>
+        /// Find the closest point to the origin.
+        /// </summary>
+        /// <param name="W">Simplex</param>
+        /// <returns>Closest point on simplex to origin.</returns>
         public Vector ClosestPoint(Simplex W) {
             Vector d = new Vector();
             if (W.count >= 2) {
@@ -302,15 +440,33 @@ namespace GJK {
             return new Vector(0, 0);
         }
 
+        /// <summary>
+        /// Hill Climbing support funtion for GJK algorithm.
+        ///  For convex polytopes do a local search to “refine” the support point from previous simulation state.
+        /// </summary>
+        /// <param name="A">Convex polytype</param>
+        /// <param name="d">Direction vector</param>
+        /// <param name="w">Initial support vertex</param>
+        /// <returns>New support vertex with minimal projection <paramref name="w"/></returns>
         public Vector SupportHC(Polyline A, Vector d, SimplexVertex w) {  // TODO
             return new Vector();
         }
 
+        /// <summary>
+        /// Form new simplex and test in which external Voronoi region the origin lies.
+        /// </summary>
+        /// <param name="W">Simplex</param>
+        /// <param name="w">New point in CSO surface</param>
+        /// <returns>New smallest simplex <paramref name="W"/> containing <paramref name="w"/> and closest point to origin.</returns>
         public Tuple<Simplex, Vector> BestSiplex(Simplex W, Vector w) {  //TODO
             return new Tuple<Simplex, Vector>(new Simplex(), new Vector());
         }
     }
 
+
+    /// <summary>
+    /// Simplex data structure. Represents <0-2> simplexes.
+    /// </summary>
     public class Simplex {
         public SimplexVertex A;
         public SimplexVertex B;
@@ -318,6 +474,9 @@ namespace GJK {
         public int count;
     }
 
+    /// <summary>
+    /// Vertex used in representation of <see cref="Simplex"/>.
+    /// </summary>
     public class SimplexVertex {
         public Vector vec;
         public int index;
