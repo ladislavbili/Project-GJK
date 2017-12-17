@@ -207,7 +207,7 @@ namespace GJK {
             foreach (Polyline polyline in objects) {
                 polyline.Draw(e.Graphics);
             }
-            if (objects.Count == 2) { // TODO spojit najblizsie body
+            if (objects.Count == 2 && objects[0].finished == true && objects[1].finished == true) { // TODO spojit najblizsie body
                 CanvasPoint a = objects[0].points[0];
                 CanvasPoint b = objects[1].points[0];
                 connectPoints(e.Graphics, a, b);
