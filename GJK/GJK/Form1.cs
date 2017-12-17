@@ -189,9 +189,9 @@ namespace GJK {
                     objects.Last().finished = true;
                 }
                 else { // add position to polyline
-                    var values = line.Split(' ').Select(Int32.Parse).ToList();
+                    var values = line.Split(' ').Select(Double.Parse).ToList();
                     Polyline polyline = objects.Last();
-                    polyline.Add(new CanvasPoint(values.First(), values.Last()));
+                    polyline.Add(new CanvasPoint((float)values.First(), (float)values.Last()));
                 }
             }
             Invalidate();
