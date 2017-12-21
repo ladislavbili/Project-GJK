@@ -1,0 +1,9 @@
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\bin\Debug\GJK.exe.config
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\bin\Debug\GJK.exe
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\bin\Debug\GJK.pdb
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.csprojResolveAssemblyReference.cache
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.Form1.resources
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.Properties.Resources.resources
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.GenerateResource.Cache
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.exe
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.pdb

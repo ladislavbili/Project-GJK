@@ -1,0 +1,8 @@
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\bin\Debug\GJKTests.dll
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\bin\Debug\GJKTests.pdb
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\bin\Debug\GJK.exe
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\bin\Debug\GJK.pdb
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\obj\Debug\GJKTests.csprojResolveAssemblyReference.cache
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\obj\Debug\GJKTests.dll
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJKTests\obj\Debug\GJKTests.pdb
