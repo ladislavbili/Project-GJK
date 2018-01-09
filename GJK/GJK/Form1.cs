@@ -626,6 +626,11 @@ namespace GJK
                             result.count = 2;
 
                         }
+                        else if ((d.X*u1.X+d.Y*u1.Y+0*u1.Z<0)&&(d.X*v1.X+d.Y*v1.Y+0*v1.Z<0))
+                        {
+                            //netreba nastavit ABC, nasli sme koliziu
+                            result.count = 3;
+                        }
                         break;
                     }
             }
