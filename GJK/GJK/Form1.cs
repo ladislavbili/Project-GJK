@@ -466,9 +466,22 @@ namespace GJK
         /// <param name="B">Convex object</param>
         /// <param name="W">Initial simplex</param>
         /// <returns>touching vector</returns>
-        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W)
-        {  // TODO
-            return new Vector();
+        public bool ProximityGJK(Polyline A, Polyline B, Simplex W)
+        {
+            Vector v = new Vector(1,1);
+            Vector w = new Vector(1,1);
+            while (dotProduct(v, w) <= 0)
+            {
+                v = ClosestPoint(W);
+                w = SupportHC(A, v, v) - SupportHC(B, -v, -v);
+                W = BestSiplex(W, w);
+                if (W.count == 3)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -510,9 +523,9 @@ namespace GJK
         /// <param name="d">Direction vector</param>
         /// <param name="w">Initial support vertex</param>
         /// <returns>New support vertex with minimal projection <paramref name="w"/></returns>
-        public CanvasPoint SupportHC(Polyline A, Vector d, CanvasPoint sp)
+        public Vector SupportHC(Polyline A, Vector d, Vector sp)
         {  // TODO
-            CanvasPoint w = sp;
+            Vector w = sp;
             double u = d.X * w.X + d.Y * w.Y;
             bool found = false;
             while (!found)
@@ -524,7 +537,7 @@ namespace GJK
                     {
                         found = false;
                         u = d.X * neighbour.X + d.Y * neighbour.Y;
-                        w = neighbour;
+                        w = new Vector(neighbour.X, neighbour.Y);
                     }
                 });
             }
@@ -536,7 +549,7 @@ namespace GJK
         /// <param name="cp"></param>
         /// <param name="origin"></param>
         /// <returns></returns>
-        public List<CanvasPoint> getNeighbours(CanvasPoint cp, Polyline origin)
+        public List<CanvasPoint> getNeighbours(Vector cp, Polyline origin)
         {
             int index = origin.points.FindIndex((item) => item.X == cp.X && item.Y == cp.Y);
             if (index == origin.points.Count - 1)
