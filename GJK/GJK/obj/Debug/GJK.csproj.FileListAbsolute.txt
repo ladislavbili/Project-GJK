@@ -7,3 +7,13 @@ C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.Propertie
 C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.GenerateResource.Cache
 C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.exe
 C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\obj\Debug\GJK.pdb
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\bin\Debug\GJK.exe.config
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\bin\Debug\GJK.exe
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\bin\Debug\GJK.pdb
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.csprojResolveAssemblyReference.cache
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.Form1.resources
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.Properties.Resources.resources
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.GenerateResource.Cache
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.CoreCompileInputs.cache
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.exe
+D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.pdb
