@@ -198,6 +198,7 @@ namespace GJK
         {  // TODO test
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
+            button1.Enabled = true;
             var lines = File.ReadAllLines(objects_file);
             objects.Add(new Polyline());
             objects.Last().finished = true;
@@ -238,6 +239,7 @@ namespace GJK
             { // TODO spojit najblizsie body
                 CanvasPoint a = objects[0].points[0];
                 CanvasPoint b = objects[1].points[0];
+                button1.Enabled = true;
                 connectPoints(e.Graphics, a, b);
             }
         }
@@ -466,22 +468,29 @@ namespace GJK
         /// <param name="B">Convex object</param>
         /// <param name="W">Initial simplex</param>
         /// <returns>touching vector</returns>
-        public bool ProximityGJK(Polyline A, Polyline B, Simplex W)
+        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W)
         {
-            Vector v = new Vector(1,1);
-            Vector w = new Vector(1,1);
-            while (dotProduct(v, w) <= 0)
+            Vector v = new Vector(1,0);
+            double weird = (new Vector(1, 0)) * (new Vector(1, 0));
+            Vector w= new Vector(A.points.First().X, A.points.First().Y);
+            Vector normalizedV= v;
+            normalizedV.Normalize();
+            while (normalizedV*normalizedV - weird > -0.1)
             {
                 v = ClosestPoint(W);
-                w = SupportHC(A, v, v) - SupportHC(B, -v, -v);
+                normalizedV = v;
+                normalizedV.Normalize();
+                w = SupportHC(A, v, w) - SupportHC(B, -v, w);
                 W = BestSiplex(W, w);
-                if (W.count == 3)
+                if (dotProduct(v, w) > 0)
                 {
-                    return true;
+                    weird = Math.Max(weird, ((dotProduct(v, w)* dotProduct(v, w)) /(normalizedV*normalizedV)));
                 }
+                label3.Text = label3.Text + w.X.ToString() + "," + w.Y.ToString() + " | ";
             }
-
-            return false;
+            label1.Text = "X: " + w.X.ToString();
+            label2.Text = "Y: " + w.Y.ToString();
+            return w;
         }
 
         /// <summary>
@@ -551,10 +560,17 @@ namespace GJK
         /// <returns></returns>
         public List<CanvasPoint> getNeighbours(Vector cp, Polyline origin)
         {
+
+            return origin.points.Where(point => point.X != cp.X && point.Y != cp.Y ).
+                           OrderBy(point => Math.Pow(point.X - cp.X, 2) + Math.Pow(point.Y - cp.Y, 2)).Take(5).ToList();
             int index = origin.points.FindIndex((item) => item.X == cp.X && item.Y == cp.Y);
             if (index == origin.points.Count - 1)
             {
                 return new List<CanvasPoint> { origin.points.First(), origin.points[index - 1] };
+            }
+            else if(index == 0)
+            {
+                return new List<CanvasPoint> { origin.points.Last(), origin.points[ 1] };
             }
             return new List<CanvasPoint> { origin.points[index + 1], origin.points[index - 1] };
         }
@@ -634,6 +650,7 @@ namespace GJK
                         break;
                     }
             }
+            result.count = 3;
             return result;
         }
         public double dotProduct(Vector v1, Vector v2)
@@ -648,6 +665,23 @@ namespace GJK
             result.Y = a.Z * b.X - a.X * b.Z;
             result.Z = a.X * b.Y - a.Y * b.X;
             return result;
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Simplex s = new Simplex();
+            s.count = 0;
+            ProximityGJK(objects[0], objects[1], s);
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 
