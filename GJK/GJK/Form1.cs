@@ -411,22 +411,23 @@ namespace GJK {
         /// <param name="W">Initial simplex</param>
         /// <returns>touching vector</returns>
         public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
-            Vector v = new Vector(1, 1);
+            Vector v = new Vector(1, 0);
             double delta = 0;
+
             Vector w = new Vector(A.points.First().X, A.points.First().Y);
             Vector normalizedV = v;
             normalizedV.Normalize();
             while (normalizedV * normalizedV - delta > -0.1) {
                 v = ClosestPoint(W);
                 normalizedV = v;
-                normalizedV.Normalize();
-                w = SupportHC(A, v, w) - SupportHC(B, -v, w);
-                W = BestSimplex(W, w);
-                if (W.count == 3) {
-                    Debug.Print("Collision");
+                if (normalizedV.X != 0 && normalizedV.Y != 0) {
+                    normalizedV.Normalize();
                 }
+                w = SupportHC(A, v) - SupportHC(B, -v);  // JE v A -v SPRAVNE?
+                W = BestSimplex(W, w);  // Namiesto tohoto, proste pridat vertex a ked je dlzky 3, testovat ci je kolizia? "Simplex.contains(ORIGIN)"
+                // TODO skusit si nakreslit BestSimplex s konkretnymi bodmi a odkrokovat...
                 if (Vector.Multiply(v, w) > 0) {
-                    delta = Math.Max(delta, ((dotProduct(v, w) * dotProduct(v, w)) / (normalizedV * normalizedV)));
+                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / (normalizedV * normalizedV)));
                 }
                 label3.Text = label3.Text + w.X.ToString() + "," + w.Y.ToString() + " | ";
             }
@@ -445,10 +446,7 @@ namespace GJK {
             if (W.count >= 2) {
                 d = W.B - W.A;
             }
-            double n = 0;
-            if (W.count == 3) { // THIS IS WRONG, n IS NOT DOUBLE, ITS 3D VECTOR
-                n = (W.B - W.A) * (W.C - W.A);
-            }
+
             switch (W.count) {
                 case 0:
                     return new Vector(0, 0);
@@ -456,8 +454,6 @@ namespace GJK {
                     return W.A;
                 case 2:
                     return W.A - (((d * W.A) / (d * d)) * d);
-                case 3: // Dont use this... DOESNT WORK FOR 3D
-                    return ((n * W.A) / (n * n)) * n;
             }
             return new Vector(0, 0);
         }
@@ -470,13 +466,14 @@ namespace GJK {
         /// <param name="d">Direction vector</param>
         /// <param name="w">Initial support vertex</param>
         /// <returns>New support vertex with minimal projection <paramref name="w"/></returns>
-        public Vector SupportHC(Polyline A, Vector d, Vector sp) {  // TODO
-            Vector w = sp;
+        public Vector SupportHC(Polyline A, Vector d) {  // TODO pamatat si visited?
+            Vector w = new Vector(A.points.First().X, A.points.First().Y);
             double u = Vector.Multiply(d, w);
             bool found = false;
             while (!found) {
                 found = true;
-                foreach (var neighbour in getNeighbours(w, A)) {
+                List<CanvasPoint> neighbours = getNeighbours(w, A);
+                foreach (var neighbour in neighbours) {
                     if (d.X * neighbour.X + d.Y * neighbour.Y < u) {
                         found = false;
                         u = d.X * neighbour.X + d.Y * neighbour.Y;
@@ -487,24 +484,26 @@ namespace GJK {
             }
             return w;
         }
-        /// <summary>
-        /// gets a neighboring points of a point from polyline origin
-        /// </summary>
-        /// <param name="cp"></param>
-        /// <param name="origin"></param>
-        /// <returns></returns>
-        public List<CanvasPoint> getNeighbours(Vector cp, Polyline origin) {
 
-            return origin.points.Where(point => point.X != cp.X && point.Y != cp.Y).
-                           OrderBy(point => Math.Pow(point.X - cp.X, 2) + Math.Pow(point.Y - cp.Y, 2)).Take(5).ToList();
-            int index = origin.points.FindIndex((item) => item.X == cp.X && item.Y == cp.Y);
-            if (index == origin.points.Count - 1) {
-                return new List<CanvasPoint> { origin.points.First(), origin.points[index - 1] };
+
+        public List<CanvasPoint> getNeighbours(Vector v, Polyline A) {
+            CanvasPoint first = A.points.First();
+            CanvasPoint last = A.points.Last();
+            List<CanvasPoint> result = new List<CanvasPoint>();
+            if (first.X == v.X && first.Y == v.Y) {
+                result.Add(A.points[1]);
+                result.Add(A.points.Last());
             }
-            else if (index == 0) {
-                return new List<CanvasPoint> { origin.points.Last(), origin.points[1] };
+            else if (last.X == v.X && last.Y == v.Y) {
+                result.Add(A.points[A.points.Count - 2]);
+                result.Add(A.points.First());
             }
-            return new List<CanvasPoint> { origin.points[index + 1], origin.points[index - 1] };
+            else {
+                int index = A.points.FindIndex(point => point.X == v.X && point.Y == v.Y);
+                result.Add(A.points[index - 1]);
+                result.Add(A.points[index + 1]);
+            }
+            return result;
         }
 
         /// <summary>
@@ -513,10 +512,11 @@ namespace GJK {
         /// <param name="W">Simplex</param>
         /// <param name="w">New point in CSO surface</param>
         /// <returns>New smallest simplex <paramref name="W"/> containing <paramref name="w"/> and closest point to origin.</returns>
-        public Simplex BestSimplex(Simplex W, Vector w) {
-            Debug.WriteLine('a');
+        public Simplex BestSimplex(Simplex W, Vector w) {  // TODO test and debug this shit
             Simplex result = new Simplex();
             Vector d = w;
+            Vector e1 = W.A - w;
+            Vector e2 = W.B - w;
             d.Negate();
             switch (W.count) {
                 case 0: {
@@ -525,7 +525,7 @@ namespace GJK {
                         break;
                     }
                 case 1: {
-                        if (((-w.X) * (W.A.X - w.X) + (-w.Y) * (W.A.Y - w.Y)) > 0) {
+                        if ((Vector.Multiply(d, e1)) < 0) {
                             result.A = w;
                             result.count = 1;
                         }
@@ -537,8 +537,6 @@ namespace GJK {
                         break;
                     }
                 case 2: {
-                        Vector e1 = W.A - w;
-                        Vector e2 = W.B - w;
                         Vector3D e1_3D = new Vector3D();
                         e1_3D.X = e1.X;
                         e1_3D.Y = e1.Y;
@@ -573,11 +571,8 @@ namespace GJK {
                         break;
                     }
             }
-            result.count = 3; //Preco?
+            //result.count = 3; //Preco?
             return result;
-        }
-        public double dotProduct(Vector v1, Vector v2) {
-            return v1.X * v2.X + v1.Y * v2.Y;
         }
 
         public Vector3D crossProduct(Vector3D a, Vector3D b) {
@@ -594,8 +589,7 @@ namespace GJK {
 
         private void button1_Click(object sender, EventArgs e) {
             Simplex s = new Simplex();
-            s.A = new Vector(objects[0].points[0].X, objects[0].points[0].Y);
-            s.count = 1;
+            s.count = 0;
             ProximityGJK(objects[0], objects[1], s);
         }
 
