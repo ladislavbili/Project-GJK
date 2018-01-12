@@ -13,10 +13,8 @@ using System.Windows;
 using System.Windows.Forms;
 using CanvasPoint = System.Drawing.PointF;
 
-namespace GJK
-{
-    public partial class Form1 : Form
-    {
+namespace GJK {
+    public partial class Form1 : Form {
 
         /// <summary>
         /// Path to file containing definitions of objects as lines of pairs of points
@@ -60,8 +58,7 @@ namespace GJK
         /// <summary>
         /// Class defining objects in form of list of points
         /// </summary>
-        public class Polyline
-        {
+        public class Polyline {
             /// <summary>
             /// List of points that comprise the objects
             /// </summary>
@@ -75,14 +72,12 @@ namespace GJK
             /// </summary>
             public bool finished;
 
-            public Polyline(List<CanvasPoint> p, Color c, bool f)
-            {
+            public Polyline(List<CanvasPoint> p, Color c, bool f) {
                 points = p;
                 color = c;
                 finished = f;
             }
-            public Polyline()
-            {
+            public Polyline() {
                 points = new List<CanvasPoint>();
                 color = Color.Black;
                 finished = false;
@@ -92,25 +87,19 @@ namespace GJK
             /// Draws object onto canvas. Filled with <see cref="color"/> and with last and first point connected if <see cref="finished"/> 
             /// </summary>
             /// <param name="g"></param>
-            public void Draw(Graphics g)
-            {
-                if (finished)
-                {
+            public void Draw(Graphics g) {
+                if (finished) {
                     g.DrawPolygon(new Pen(color, 3), points.ToArray());
                     g.FillPolygon(new SolidBrush(Color.Yellow), points.ToArray());
                 }
-                else
-                {
-                    if (points.Count > 1)
-                    {
-                        foreach (CanvasPoint point in points)
-                        {
+                else {
+                    if (points.Count > 1) {
+                        foreach (CanvasPoint point in points) {
                             g.DrawLines(new Pen(color, 3), points.ToArray());
                         }
                     }
                 }
-                foreach (CanvasPoint point in points)
-                {
+                foreach (CanvasPoint point in points) {
                     g.FillEllipse(new SolidBrush(Color.Red), new Rectangle((int)Math.Round(point.X) - 5, (int)Math.Round(point.Y) - 5, 10, 10));
                 }
             }
@@ -120,10 +109,8 @@ namespace GJK
             /// </summary>
             /// <param name="x"></param>
             /// <param name="y"></param>
-            public void Move(int x, int y)
-            {
-                for (int i = 0; i < points.Count(); i++)
-                {
+            public void Move(int x, int y) {
+                for (int i = 0; i < points.Count(); i++) {
                     CanvasPoint new_point = new CanvasPoint(points[i].X - x, points[i].Y - y);
                     points[i] = new_point;
                 }
@@ -133,12 +120,10 @@ namespace GJK
             /// Finds center of object.
             /// </summary>
             /// <returns>Center of object.</returns>
-            public CanvasPoint GetCenter()
-            {
+            public CanvasPoint GetCenter() {
                 int totalX = 0;
                 int totalY = 0;
-                foreach (CanvasPoint p in points)
-                {
+                foreach (CanvasPoint p in points) {
                     totalX += (int)Math.Round(p.X);
                     totalY += (int)Math.Round(p.Y);
                 }
@@ -151,8 +136,7 @@ namespace GJK
             /// Rotates object by <paramref name="angle"/> (moves each point).
             /// </summary>
             /// <param name="angle"></param>
-            public void Rotate(double angle)
-            {
+            public void Rotate(double angle) {
                 Matrix myMatrix = new Matrix();
                 myMatrix.RotateAt((float)angle, GetCenter());
                 CanvasPoint[] p = points.ToArray();
@@ -164,14 +148,12 @@ namespace GJK
             /// Adds new point to unfinished object.
             /// </summary>
             /// <param name="p"></param>
-            public void Add(CanvasPoint p)
-            {
+            public void Add(CanvasPoint p) {
                 points.Add(p);
             }
         }
 
-        public Form1()
-        {
+        public Form1() {
             InitializeComponent();
             this.DoubleBuffered = true;
         }
@@ -181,10 +163,8 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            if (!File.Exists(objects_file) || new FileInfo(objects_file).Length == 0)
-            {
+        private void Form1_Load(object sender, EventArgs e) {
+            if (!File.Exists(objects_file) || new FileInfo(objects_file).Length == 0) {
                 load_objects_btn.Enabled = false;
             }
         }
@@ -194,27 +174,22 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void load_objects_btn_Click(object sender, EventArgs e)
-        {  // TODO test
+        private void load_objects_btn_Click(object sender, EventArgs e) {  // TODO test
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
             button1.Enabled = true;
             var lines = File.ReadAllLines(objects_file);
             objects.Add(new Polyline());
             objects.Last().finished = true;
-            foreach (var line in lines)
-            { // iterate over positions
-                if (line == String.Empty)
-                { // Go to second object
-                    if (objects.Count == 2)
-                    {
+            foreach (var line in lines) { // iterate over positions
+                if (line == String.Empty) { // Go to second object
+                    if (objects.Count == 2) {
                         break;
                     }
                     objects.Add(new Polyline());
                     objects.Last().finished = true;
                 }
-                else
-                { // add position to polyline
+                else { // add position to polyline
                     var values = line.Split(' ').Select(Double.Parse).ToList();
                     Polyline polyline = objects.Last();
                     polyline.Add(new CanvasPoint((float)values.First(), (float)values.Last()));
@@ -228,15 +203,12 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_Paint(object sender, PaintEventArgs e)
-        {
+        private void Form1_Paint(object sender, PaintEventArgs e) {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            foreach (Polyline polyline in objects)
-            {
+            foreach (Polyline polyline in objects) {
                 polyline.Draw(e.Graphics);
             }
-            if (objects.Count == 2 && objects[0].finished == true && objects[1].finished == true)
-            { // TODO spojit najblizsie body
+            if (objects.Count == 2 && objects[0].finished == true && objects[1].finished == true) { // TODO spojit najblizsie body
                 CanvasPoint a = objects[0].points[0];
                 CanvasPoint b = objects[1].points[0];
                 button1.Enabled = true;
@@ -249,16 +221,14 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void create_objects_btn_Click(object sender, EventArgs e)
-        {
+        private void create_objects_btn_Click(object sender, EventArgs e) {
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
             finish_object_btn.Enabled = false;
             creating = true;
         }
 
-        private void Form1_Click(object sender, EventArgs e)
-        {
+        private void Form1_Click(object sender, EventArgs e) {
         }
 
 
@@ -267,22 +237,17 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (creating)
-            {
-                if (objects.Count == 0)
-                {
+        private void Form1_MouseClick(object sender, MouseEventArgs e) {
+            if (creating) {
+                if (objects.Count == 0) {
                     objects.Add(new Polyline());
                 }
                 Polyline obj = objects.Last();
                 obj.Add(new CanvasPoint(e.X, e.Y));
-                if (obj.points.Count > 2)
-                {
+                if (obj.points.Count > 2) {
                     finish_object_btn.Enabled = true;
                 }
-                else
-                {
+                else {
                     finish_object_btn.Enabled = false;
                 }
                 Invalidate();
@@ -294,17 +259,14 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void finish_object_btn_Click(object sender, EventArgs e)
-        {
+        private void finish_object_btn_Click(object sender, EventArgs e) {
             objects.Last().finished = true;
-            if (objects.Count == 2)
-            {
+            if (objects.Count == 2) {
                 creating = false;
 
                 save_objects_btn.Enabled = true;
             }
-            else
-            {
+            else {
                 objects.Add(new Polyline());
             }
             Invalidate();
@@ -317,16 +279,12 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void save_objects_btn_Click(object sender, EventArgs e)
-        {
+        private void save_objects_btn_Click(object sender, EventArgs e) {
             save_objects_btn.Enabled = false;
-            using (FileStream fs = File.Open(objects_file, FileMode.Create))
-            {
-                foreach (Polyline polyline in objects)
-                {
+            using (FileStream fs = File.Open(objects_file, FileMode.Create)) {
+                foreach (Polyline polyline in objects) {
                     string data = "";
-                    foreach (CanvasPoint point in polyline.points)
-                    {
+                    foreach (CanvasPoint point in polyline.points) {
                         data += point.X + " " + point.Y + Environment.NewLine;
                     }
                     data += Environment.NewLine;
@@ -343,16 +301,12 @@ namespace GJK
         /// <param name="polygon"></param>
         /// <param name="testPoint"></param>
         /// <returns></returns>
-        public static bool IsPointInPolygon(PointF[] polygon, PointF testPoint)
-        {
+        public static bool IsPointInPolygon(PointF[] polygon, PointF testPoint) {
             bool result = false;
             int j = polygon.Count() - 1;
-            for (int i = 0; i < polygon.Count(); i++)
-            {
-                if (polygon[i].Y < testPoint.Y && polygon[j].Y >= testPoint.Y || polygon[j].Y < testPoint.Y && polygon[i].Y >= testPoint.Y)
-                {
-                    if (polygon[i].X + (testPoint.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) * (polygon[j].X - polygon[i].X) < testPoint.X)
-                    {
+            for (int i = 0; i < polygon.Count(); i++) {
+                if (polygon[i].Y < testPoint.Y && polygon[j].Y >= testPoint.Y || polygon[j].Y < testPoint.Y && polygon[i].Y >= testPoint.Y) {
+                    if (polygon[i].X + (testPoint.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) * (polygon[j].X - polygon[i].X) < testPoint.X) {
                         result = !result;
                     }
                 }
@@ -366,24 +320,19 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_MouseDown(object sender, MouseEventArgs e)
-        {
+        private void Form1_MouseDown(object sender, MouseEventArgs e) {
             moving = false;
             moving_obj = null;
             rotating = false;
             rotating_obj = null;
-            foreach (Polyline polyline in objects)
-            {
-                if (IsPointInPolygon(Array.ConvertAll(polyline.points.ToArray(), item => (PointF)item), new PointF(e.X, e.Y)))
-                {
-                    if (e.Button == MouseButtons.Left)
-                    {
+            foreach (Polyline polyline in objects) {
+                if (IsPointInPolygon(Array.ConvertAll(polyline.points.ToArray(), item => (PointF)item), new PointF(e.X, e.Y))) {
+                    if (e.Button == MouseButtons.Left) {
                         moving_obj = polyline;
                         moving = true;
                         last_move_position = new CanvasPoint(e.X, e.Y);
                     }
-                    else if (e.Button == MouseButtons.Right)
-                    {
+                    else if (e.Button == MouseButtons.Right) {
                         rotating_obj = polyline;
                         rotating = true;
                         last_rotate_click = new CanvasPoint(e.X, e.Y);
@@ -398,15 +347,12 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_MouseUp(object sender, MouseEventArgs e)
-        {
-            if (moving)
-            {
+        private void Form1_MouseUp(object sender, MouseEventArgs e) {
+            if (moving) {
                 moving = false;
                 moving_obj = null;
             }
-            else if (rotating)
-            {
+            else if (rotating) {
                 rotating = false;
                 rotating_obj = null;
             }
@@ -418,18 +364,15 @@ namespace GJK
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Form1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (moving)
-            {
+        private void Form1_MouseMove(object sender, MouseEventArgs e) {
+            if (moving) {
                 int x_diff = (int)Math.Round(last_move_position.X) - e.X;
                 int y_diff = (int)Math.Round(last_move_position.Y) - e.Y;
                 last_move_position.X = e.X;
                 last_move_position.Y = e.Y;
                 moving_obj.Move(x_diff, y_diff);
             }
-            else if (rotating)
-            {
+            else if (rotating) {
                 CanvasPoint sp = new CanvasPoint(last_rotate_click.X, last_rotate_click.Y);
                 CanvasPoint mp = new CanvasPoint(rotating_obj.GetCenter().X, rotating_obj.GetCenter().Y);
                 CanvasPoint p = new CanvasPoint(e.X, e.Y);
@@ -452,8 +395,7 @@ namespace GJK
         /// <param name="g"></param>
         /// <param name="a"></param>
         /// <param name="b"></param>
-        private void connectPoints(Graphics g, CanvasPoint a, CanvasPoint b)
-        {
+        private void connectPoints(Graphics g, CanvasPoint a, CanvasPoint b) {
             Pen p = new Pen(Color.Green, 3);
             p.DashStyle = DashStyle.Dash;
             g.DrawLine(p, a, b);
@@ -468,23 +410,24 @@ namespace GJK
         /// <param name="B">Convex object</param>
         /// <param name="W">Initial simplex</param>
         /// <returns>touching vector</returns>
-        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W)
-        {
-            Vector v = new Vector(1,0);
-            double weird = (new Vector(1, 0)) * (new Vector(1, 0));
-            Vector w= new Vector(A.points.First().X, A.points.First().Y);
-            Vector normalizedV= v;
+        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
+            Vector v = new Vector(1, 0);
+            double delta = 0;
+
+            Vector w = new Vector(A.points.First().X, A.points.First().Y);
+            Vector normalizedV = v;
             normalizedV.Normalize();
-            while (normalizedV*normalizedV - weird > -0.1)
-            {
+            while (normalizedV * normalizedV - delta > -0.1) {
                 v = ClosestPoint(W);
                 normalizedV = v;
-                normalizedV.Normalize();
-                w = SupportHC(A, v, w) - SupportHC(B, -v, w);
-                W = BestSiplex(W, w);
-                if (dotProduct(v, w) > 0)
-                {
-                    weird = Math.Max(weird, ((dotProduct(v, w)* dotProduct(v, w)) /(normalizedV*normalizedV)));
+                if (normalizedV.X != 0 && normalizedV.Y != 0) {
+                    normalizedV.Normalize();
+                }
+                w = SupportHC(A, v) - SupportHC(B, -v);  // JE v A -v SPRAVNE?
+                W = BestSimplex(W, w);  // Namiesto tohoto, proste pridat vertex a ked je dlzky 3, testovat ci je kolizia? "Simplex.contains(ORIGIN)"
+                // TODO skusit si nakreslit BestSimplex s konkretnymi bodmi a odkrokovat...
+                if (Vector.Multiply(v, w) > 0) {
+                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / (normalizedV * normalizedV)));
                 }
                 label3.Text = label3.Text + w.X.ToString() + "," + w.Y.ToString() + " | ";
             }
@@ -498,28 +441,19 @@ namespace GJK
         /// </summary>
         /// <param name="W">Simplex</param>
         /// <returns>Closest point on simplex to origin.</returns>
-        public Vector ClosestPoint(Simplex W)
-        {
+        public Vector ClosestPoint(Simplex W) {
             Vector d = new Vector();
-            if (W.count >= 2)
-            {
+            if (W.count >= 2) {
                 d = W.B - W.A;
             }
-            double n = 0;
-            if (W.count == 3)
-            {
-                n = (W.B - W.A) * (W.C - W.A);
-            }
-            switch (W.count)
-            {
+
+            switch (W.count) {
                 case 0:
                     return new Vector(0, 0);
                 case 1:
                     return W.A;
                 case 2:
                     return W.A - (((d * W.A) / (d * d)) * d);
-                case 3: // Dont use this...
-                    return ((n * W.A) / (n * n)) * n;
             }
             return new Vector(0, 0);
         }
@@ -532,47 +466,44 @@ namespace GJK
         /// <param name="d">Direction vector</param>
         /// <param name="w">Initial support vertex</param>
         /// <returns>New support vertex with minimal projection <paramref name="w"/></returns>
-        public Vector SupportHC(Polyline A, Vector d, Vector sp)
-        {  // TODO
-            Vector w = sp;
-            double u = d.X * w.X + d.Y * w.Y;
+        public Vector SupportHC(Polyline A, Vector d) {  // TODO pamatat si visited?
+            Vector w = new Vector(A.points.First().X, A.points.First().Y);
+            double u = Vector.Multiply(d, w);
             bool found = false;
-            while (!found)
-            {
+            while (!found) {
                 found = true;
-                getNeighbours(w, A).ForEach((neighbour) =>
-                {
-                    if (d.X * neighbour.X + d.Y * neighbour.Y < u)
-                    {
+                List<CanvasPoint> neighbours = getNeighbours(w, A);
+                foreach (var neighbour in neighbours) {
+                    if (d.X * neighbour.X + d.Y * neighbour.Y < u) {
                         found = false;
                         u = d.X * neighbour.X + d.Y * neighbour.Y;
                         w = new Vector(neighbour.X, neighbour.Y);
+                        break;
                     }
-                });
+                }
             }
             return w;
         }
-        /// <summary>
-        /// gets a neighboring points of a point from polyline origin
-        /// </summary>
-        /// <param name="cp"></param>
-        /// <param name="origin"></param>
-        /// <returns></returns>
-        public List<CanvasPoint> getNeighbours(Vector cp, Polyline origin)
-        {
 
-            return origin.points.Where(point => point.X != cp.X && point.Y != cp.Y ).
-                           OrderBy(point => Math.Pow(point.X - cp.X, 2) + Math.Pow(point.Y - cp.Y, 2)).Take(5).ToList();
-            int index = origin.points.FindIndex((item) => item.X == cp.X && item.Y == cp.Y);
-            if (index == origin.points.Count - 1)
-            {
-                return new List<CanvasPoint> { origin.points.First(), origin.points[index - 1] };
+
+        public List<CanvasPoint> getNeighbours(Vector v, Polyline A) {
+            CanvasPoint first = A.points.First();
+            CanvasPoint last = A.points.Last();
+            List<CanvasPoint> result = new List<CanvasPoint>();
+            if (first.X == v.X && first.Y == v.Y) {
+                result.Add(A.points[1]);
+                result.Add(A.points.Last());
             }
-            else if(index == 0)
-            {
-                return new List<CanvasPoint> { origin.points.Last(), origin.points[ 1] };
+            else if (last.X == v.X && last.Y == v.Y) {
+                result.Add(A.points[A.points.Count - 2]);
+                result.Add(A.points.First());
             }
-            return new List<CanvasPoint> { origin.points[index + 1], origin.points[index - 1] };
+            else {
+                int index = A.points.FindIndex(point => point.X == v.X && point.Y == v.Y);
+                result.Add(A.points[index - 1]);
+                result.Add(A.points[index + 1]);
+            }
+            return result;
         }
 
         /// <summary>
@@ -581,39 +512,31 @@ namespace GJK
         /// <param name="W">Simplex</param>
         /// <param name="w">New point in CSO surface</param>
         /// <returns>New smallest simplex <paramref name="W"/> containing <paramref name="w"/> and closest point to origin.</returns>
-        public Simplex BestSiplex(Simplex W, Vector w)
-        {
-            Debug.WriteLine('a');
+        public Simplex BestSimplex(Simplex W, Vector w) {  // TODO test and debug this shit
             Simplex result = new Simplex();
             Vector d = w;
+            Vector e1 = W.A - w;
+            Vector e2 = W.B - w;
             d.Negate();
-            switch (W.count)
-            {
-                case 0:
-                    {
+            switch (W.count) {
+                case 0: {
                         result.A = w;
                         result.count = 1;
                         break;
                     }
-                case 1:
-                    {
-                        if (((-w.X) * (W.A.X - w.X) + (-w.Y) * (W.A.Y - w.Y)) > 0)
-                        {
+                case 1: {
+                        if ((Vector.Multiply(d, e1)) < 0) {
                             result.A = w;
                             result.count = 1;
                         }
-                        else
-                        {
+                        else {
                             result.A = W.A;
                             result.B = w;
                             result.count = 2;
                         }
                         break;
                     }
-                case 2:
-                    {
-                        Vector e1 = W.A - w;
-                        Vector e2 = W.B - w;
+                case 2: {
                         Vector3D e1_3D = new Vector3D();
                         e1_3D.X = e1.X;
                         e1_3D.Y = e1.Y;
@@ -624,42 +547,35 @@ namespace GJK
                         e2_3D.Z = 0;
                         Vector3D u1 = crossProduct(e1_3D, crossProduct(e1_3D, e2_3D));
                         Vector3D v1 = crossProduct(crossProduct(e1_3D, e2_3D), e2_3D);
-                        if ((d.X * e1.X + d.Y * e1.Y) < 0 && (d.X * e2.X + d.Y * e2.Y) < 0)
-                        {
+                        if ((d.X * e1.X + d.Y * e1.Y) < 0 && (d.X * e2.X + d.Y * e2.Y) < 0) {
                             result.A = w;
                             result.count = 1;
                         }
-                        else if ((d.X * e1.X + d.Y * e1.Y) > 0 && (d.X * u1.X + d.Y * u1.Y + 0 * u1.Z) > 0)
-                        {
+                        else if ((d.X * e1.X + d.Y * e1.Y) > 0 && (d.X * u1.X + d.Y * u1.Y + 0 * u1.Z) > 0) {
                             result.A = W.A;
                             result.B = w;
                             result.count = 2;
                         }
-                        else if ((d.X * e2.X + d.Y * e2.Y) > 0 && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z) > 0)
-                        {
+                        else if ((d.X * e2.X + d.Y * e2.Y) > 0 && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z) > 0) {
                             result.A = W.B;
                             result.B = w;
                             result.count = 2;
 
                         }
-                        else if ((d.X*u1.X+d.Y*u1.Y+0*u1.Z<0)&&(d.X*v1.X+d.Y*v1.Y+0*v1.Z<0))
-                        {
-                            //netreba nastavit ABC, nasli sme koliziu
+                        else if ((d.X * u1.X + d.Y * u1.Y + 0 * u1.Z < 0) && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z < 0)) {
+                            result.A = W.A;
+                            result.B = W.B;
+                            result.C = w; // Added
                             result.count = 3;
                         }
                         break;
                     }
             }
-            result.count = 3;
+            //result.count = 3; //Preco?
             return result;
         }
-        public double dotProduct(Vector v1, Vector v2)
-        {
-            return v1.X * v2.X + v1.Y * v2.Y;
-        }
 
-        public Vector3D crossProduct(Vector3D a, Vector3D b)
-        {
+        public Vector3D crossProduct(Vector3D a, Vector3D b) {
             Vector3D result = new Vector3D();
             result.X = a.Y * b.Z - a.Z * b.Y;
             result.Y = a.Z * b.X - a.X * b.Z;
@@ -667,20 +583,17 @@ namespace GJK
             return result;
         }
 
-        private void label1_Click(object sender, EventArgs e)
-        {
+        private void label1_Click(object sender, EventArgs e) {
 
         }
 
-        private void button1_Click(object sender, EventArgs e)
-        {
+        private void button1_Click(object sender, EventArgs e) {
             Simplex s = new Simplex();
             s.count = 0;
             ProximityGJK(objects[0], objects[1], s);
         }
 
-        private void label2_Click(object sender, EventArgs e)
-        {
+        private void label2_Click(object sender, EventArgs e) {
 
         }
     }
@@ -689,15 +602,13 @@ namespace GJK
     /// <summary>
     /// Simplex data structure. Represents <0-2> simplexes.
     /// </summary>
-    public class Simplex
-    {
+    public class Simplex {
         public Vector A;
         public Vector B;
         public Vector C;
         public int count;
     }
-    public class Vector3D
-    {
+    public class Vector3D {
         public double X;
         public double Y;
         public double Z;
