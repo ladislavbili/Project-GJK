@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector3 = System.Numerics.Vector3;
 using System.Windows;
 using System.Windows.Forms;
 using CanvasPoint = System.Drawing.PointF;
@@ -525,7 +526,7 @@ namespace GJK {
                         break;
                     }
                 case 1: {
-                        if ((Vector.Multiply(d, e1)) < 0) {
+                        if ((Vector.Multiply(d, e1)) > 0) {
                             result.A = w;
                             result.count = 1;
                         }
@@ -537,16 +538,10 @@ namespace GJK {
                         break;
                     }
                 case 2: {
-                        Vector3D e1_3D = new Vector3D();
-                        e1_3D.X = e1.X;
-                        e1_3D.Y = e1.Y;
-                        e1_3D.Z = 0;
-                        Vector3D e2_3D = new Vector3D();
-                        e2_3D.X = e2.X;
-                        e2_3D.Y = e2.Y;
-                        e2_3D.Z = 0;
-                        Vector3D u1 = crossProduct(e1_3D, crossProduct(e1_3D, e2_3D));
-                        Vector3D v1 = crossProduct(crossProduct(e1_3D, e2_3D), e2_3D);
+                        Vector3 e1_3D = new Vector3((float)e1.X, (float)e1.Y, 0);
+                        Vector3 e2_3D = new Vector3((float)e2.X, (float)e2.Y, 0);
+                        Vector3 u1 = Vector3.Cross(e1_3D, Vector3.Cross(e1_3D, e2_3D));
+                        Vector3 v1 = Vector3.Cross(Vector3.Cross(e1_3D, e2_3D), e2_3D);
                         if ((d.X * e1.X + d.Y * e1.Y) < 0 && (d.X * e2.X + d.Y * e2.Y) < 0) {
                             result.A = w;
                             result.count = 1;
@@ -575,14 +570,6 @@ namespace GJK {
             return result;
         }
 
-        public Vector3D crossProduct(Vector3D a, Vector3D b) {
-            Vector3D result = new Vector3D();
-            result.X = a.Y * b.Z - a.Z * b.Y;
-            result.Y = a.Z * b.X - a.X * b.Z;
-            result.Z = a.X * b.Y - a.Y * b.X;
-            return result;
-        }
-
         private void label1_Click(object sender, EventArgs e) {
 
         }
@@ -607,10 +594,5 @@ namespace GJK {
         public Vector B;
         public Vector C;
         public int count;
-    }
-    public class Vector3D {
-        public double X;
-        public double Y;
-        public double Z;
     }
 }
