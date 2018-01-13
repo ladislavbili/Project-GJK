@@ -414,27 +414,46 @@ namespace GJK {
         public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
             Vector v = new Vector(1, 0);
             double delta = 0;
-
             Vector w = new Vector(A.points.First().X, A.points.First().Y);
-            Vector normalizedV = v;
-            normalizedV.Normalize();
-            while (normalizedV * normalizedV - delta > -0.1) {
+
+            while (Vector.Multiply(v, v) - delta > 0.1 || (v.X == 0 && v.Y == 0)) {
+                double temp = Vector.Multiply(v, v) - delta;
                 v = ClosestPoint(W);
-                normalizedV = v;
-                if (normalizedV.X != 0 && normalizedV.Y != 0) {
-                    normalizedV.Normalize();
+                w = SupportHC(A, v) - SupportHC(B, -v);  // JE v A -v SPRAVNE? (pravdepodobne ano...)
+                W = BestSimplex(W, w); // TODO otestovat, ci ked potencialny triangle (W) nebude obkolesovat origin, tak ci vznikne W.count == 3 alebo nie (nemal by...)!!!!!
+                double temp2 = Vector.Multiply(v, w);
+                if (W.count == 3) {
+                    Debug.Print("Do stuff? return...");
                 }
-                w = SupportHC(A, v) - SupportHC(B, -v);  // JE v A -v SPRAVNE?
-                W = BestSimplex(W, w);  // Namiesto tohoto, proste pridat vertex a ked je dlzky 3, testovat ci je kolizia? "Simplex.contains(ORIGIN)"
-                // TODO skusit si nakreslit BestSimplex s konkretnymi bodmi a odkrokovat...
-                if (Vector.Multiply(v, w) > 0) {
-                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / (normalizedV * normalizedV)));
+                if (Vector.Multiply(v, w) > 0) { // Toto nikdy nie je mensie ako 0, ale je to velmi blizko pri ...
+                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / Vector.Multiply(v, v)));
                 }
-                label3.Text = label3.Text + w.X.ToString() + "," + w.Y.ToString() + " | ";
             }
-            label1.Text = "X: " + w.X.ToString();
-            label2.Text = "Y: " + w.Y.ToString();
-            return w;
+            return w; // Toto by mala byt ich vzdialenost ak nemame koliziu?
+        }
+
+        public Vector ProximityGJKNEW(Polyline A, Polyline B, Simplex W) {  // TOTO JE IBA TEST
+            Vector v = new Vector(1, 0);
+            double phi = 0;
+            Vector w = new Vector(A.points.First().X, A.points.First().Y);
+            bool close_enough = false;
+            double eps = 0.1;
+            while (!close_enough) {
+                
+                w = SupportHC(A, v) - SupportHC(B, -v); // vracia zle body...
+                double delta = Vector.Multiply(v, w) / v.Length;
+                phi = Math.Max(phi, delta);
+                close_enough = v.Length - phi <= eps;
+                if (!close_enough) {
+                    if (W.count == 0) {
+                        W.A = w;
+                        W.count = 1;
+                    }
+                    v = ClosestPoint(W);
+                    W = BestSimplex(W, w);
+                }
+            }
+            return v;
         }
 
         /// <summary>
@@ -455,6 +474,14 @@ namespace GJK {
                     return W.A;
                 case 2:
                     return W.A - (((d * W.A) / (d * d)) * d);
+                case 3: { // Toto nefunguje lebo delenie nulou... (Z je vsade 0)
+                        Vector3 W1 = new Vector3((float)W.A.X, (float)W.A.Y, 0);
+                        Vector3 W2 = new Vector3((float)W.B.X, (float)W.B.Y, 0);
+                        Vector3 W3 = new Vector3((float)W.C.X, (float)W.C.Y, 0);
+                        Vector3 n = Vector3.Cross((W2 - W1), (W3 - W1));
+                        Vector3 result = Vector3.Multiply(((Vector3.Multiply(n, W1)) / (Vector3.Multiply(n, n))), n);
+                        return new Vector(result.X, result.Y);
+                    }
             }
             return new Vector(0, 0);
         }
@@ -513,12 +540,12 @@ namespace GJK {
         /// <param name="W">Simplex</param>
         /// <param name="w">New point in CSO surface</param>
         /// <returns>New smallest simplex <paramref name="W"/> containing <paramref name="w"/> and closest point to origin.</returns>
-        public Simplex BestSimplex(Simplex W, Vector w) {  // TODO test and debug this shit
+        public Simplex BestSimplexOLD(Simplex W, Vector w) {  // TODO test and debug this shit
             Simplex result = new Simplex();
-            Vector d = w;
-            Vector e1 = W.A - w;
+            Vector d = new Vector(0, 0) - w; // d.negate(); AO = O - A; O = origin (0, 0)
+            Vector e1 = W.A - w; // AB = B - A
             Vector e2 = W.B - w;
-            d.Negate();
+            
             switch (W.count) {
                 case 0: {
                         result.A = w;
@@ -567,6 +594,101 @@ namespace GJK {
                     }
             }
             //result.count = 3; //Preco?
+            return result;
+        }
+
+
+        private Vector ClosestToSegment(Vector pt, Vector p1, Vector p2) {
+            Vector closest = new Vector();
+            double dx = p2.X - p1.X;
+            double dy = p2.Y - p1.Y;
+            if ((dx == 0) && (dy == 0)) {
+                // It's a point not a line segment.
+                closest = p1;
+                return closest;
+            }
+
+            // Calculate the t that minimizes the distance.
+            double t = ((pt.X - p1.X) * dx + (pt.Y - p1.Y) * dy) / (dx * dx + dy * dy);
+
+            // See if this represents one of the segment's
+            // end points or a point in the middle.
+            if (t < 0) {
+                closest = new Vector(p1.X, p1.Y);
+                dx = pt.X - p1.X;
+                dy = pt.Y - p1.Y;
+            }
+            else if (t > 1) {
+                closest = new Vector(p2.X, p2.Y);
+                dx = pt.X - p2.X;
+                dy = pt.Y - p2.Y;
+            }
+            else {
+                closest = new Vector(p1.X + t * dx, p1.Y + t * dy);
+                dx = pt.X - closest.X;
+                dy = pt.Y - closest.Y;
+            }
+
+            return closest;
+        }
+
+        public Simplex BestSimplex(Simplex W, Vector w) {
+            Simplex result = new Simplex();
+            switch (W.count) {
+                case 0: {
+                        result.A = w;
+                        result.count = 1;
+                        break;
+                    }
+                case 1: {
+                        Simplex line = new Simplex();
+                        line.A = w;
+                        line.B = W.A;
+                        line.count = 2;
+                        Vector closest = ClosestToSegment(new Vector(0, 0), w, W.A);
+                        if (closest == w) { // tento check moze failnut aj ked "closest == w"?
+                            result.A = w;
+                            result.count = 1;
+                        }
+                        else {
+                            result.A = W.A;
+                            result.B = w;
+                            result.count = 2;
+                        }
+                        break;
+                    }
+                case 2: {
+                        Vector d = new Vector(0, 0) - w; // d.negate(); AO = O - A; O = origin (0, 0)
+                        Vector e1 = W.A - w; // AB = B - A
+                        Vector e2 = W.B - w;
+                        Vector3 e1_3D = new Vector3((float)e1.X, (float)e1.Y, 0);
+                        Vector3 e2_3D = new Vector3((float)e2.X, (float)e2.Y, 0);
+                        Vector3 u1 = Vector3.Cross(e1_3D, Vector3.Cross(e1_3D, e2_3D));
+                        Vector3 v1 = Vector3.Cross(Vector3.Cross(e1_3D, e2_3D), e2_3D);
+                        if ((d.X * e1.X + d.Y * e1.Y) < 0 && (d.X * e2.X + d.Y * e2.Y) < 0) {
+                            result.A = w;
+                            result.count = 1;
+                        }
+                        else if ((d.X * e1.X + d.Y * e1.Y) > 0 && (d.X * u1.X + d.Y * u1.Y + 0 * u1.Z) > 0) {
+                            result.A = W.A;
+                            result.B = w;
+                            result.count = 2;
+                        }
+                        else if ((d.X * e2.X + d.Y * e2.Y) > 0 && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z) > 0) {
+                            result.A = W.B;
+                            result.B = w;
+                            result.count = 2;
+
+                        }
+                        else if ((d.X * u1.X + d.Y * u1.Y + 0 * u1.Z < 0) && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z < 0)) {
+                            result.A = W.A;
+                            result.B = W.B;
+                            result.C = w; // Added
+                            result.count = 3;
+                        }
+                        break;
+                    }
+            }
             return result;
         }
 
