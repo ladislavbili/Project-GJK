@@ -17,3 +17,5 @@ D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.GenerateResource.Ca
 D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.csproj.CoreCompileInputs.cache
 D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.exe
 D:\Praca\Momentalne\Project-GJK\GJK\GJK\obj\Debug\GJK.pdb
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\bin\Debug\System.Numerics.Vectors.dll
+C:\Users\MH\Desktop\Modelovanie\repo\Project-GJK\GJK\GJK\bin\Debug\System.Numerics.Vectors.xml

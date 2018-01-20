@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vector3 = System.Numerics.Vector3;
 using System.Windows;
 using System.Windows.Forms;
 using CanvasPoint = System.Drawing.PointF;
@@ -21,9 +22,36 @@ namespace GJK {
         /// </summary>
         public const string objects_file = "objects.txt";
         /// <summary>
-        /// List of interacitive objects in form of polylines created from objects defined in <see cref="objects_file"/>
+        /// List of interactive objects in form of polylines created from objects defined in <see cref="objects_file"/>
         /// </summary>
         public List<Polyline> objects = new List<Polyline>();
+
+        public class Pair<T1, T2> {
+            public T1 First { get; set; }
+            public T2 Second { get; set; }
+        }
+        /// <summary>
+        ///  Struct make for ProximityGJK return value, which needs to return multiple values.
+        /// </summary>
+        public struct GJKOutput {
+            public bool Collision;
+            public double Distance;
+            public Pair<Vector, Vector> closestFeatures;
+            public Vector touchingVector;
+            public Pair<Vector, Vector> touchingVectorPoints;
+        }
+
+        public bool connect = false;
+
+        /// <summary>
+        /// Closest Points on both geometries, to be connected if <see cref="connect"/> is true
+        /// </summary>
+        public Vector connectedPointA = new Vector();
+        public Vector connectedPointB = new Vector();
+
+        public Vector connectedTouchingPointA = new Vector();
+        public Vector connectedTouchingPointB = new Vector();
+
         /// <summary>
         /// If true, then app is in state of creating new objects using click events
         /// </summary>
@@ -177,7 +205,6 @@ namespace GJK {
         private void load_objects_btn_Click(object sender, EventArgs e) {  // TODO test
             create_objects_btn.Enabled = false;
             load_objects_btn.Enabled = false;
-            button1.Enabled = true;
             var lines = File.ReadAllLines(objects_file);
             objects.Add(new Polyline());
             objects.Last().finished = true;
@@ -208,11 +235,11 @@ namespace GJK {
             foreach (Polyline polyline in objects) {
                 polyline.Draw(e.Graphics);
             }
-            if (objects.Count == 2 && objects[0].finished == true && objects[1].finished == true) { // TODO spojit najblizsie body
-                CanvasPoint a = objects[0].points[0];
-                CanvasPoint b = objects[1].points[0];
-                button1.Enabled = true;
-                connectPoints(e.Graphics, a, b);
+            if (!connect) {
+                Pen p1 = new Pen(Color.Green, 3);
+                Pen p2 = new Pen(Color.Blue, 3);
+                connectPoints(e.Graphics, connectedPointA, connectedPointB, p1);
+                //connectPoints(e.Graphics, connectedTouchingPointA, connectedTouchingPointB, p2);
             }
         }
 
@@ -386,21 +413,47 @@ namespace GJK {
                 double angle = (pAngle - sAngle) * 180 / Math.PI; ;
                 rotating_obj.Rotate(angle);
             }
+            if (objects.Count == 2 && objects[0].finished && objects[1].finished) {
+                Simplex s = new Simplex();
+                s.count = 0;
+                GJKOutput result = ProximityGJK(objects[0], objects[1], s);
+                if (result.Collision) {
+                    collisionValueLabel.Text = "Yes";
+                    distanceValueLabel.Text = result.Distance.ToString("F4");
+                    closestFeaturesValueALabel.Text = "A: -";
+                    closestFeaturesValueBLabel.Text = "B: -";
+                    connect = true;
+
+                }
+                else {
+                    collisionValueLabel.Text = "No";
+                    distanceValueLabel.Text = result.Distance.ToString("F4");
+                    string A = "(" + result.closestFeatures.First.X.ToString("F2") + ", " + result.closestFeatures.First.Y.ToString("F2") + ")";
+                    string B = "(" + result.closestFeatures.Second.X.ToString("F2") + ", " + result.closestFeatures.Second.Y.ToString("F2") + ")";
+                    closestFeaturesValueALabel.Text = "A: " + A;
+                    closestFeaturesValueBLabel.Text = "B: " + B;
+                    connect = false;
+                    connectedPointA = result.closestFeatures.First;
+                    connectedPointB = result.closestFeatures.Second;
+                    connectedTouchingPointA = result.touchingVectorPoints.First;
+                    connectedTouchingPointB = result.touchingVectorPoints.Second;
+                }
+            }
+
             Invalidate();
         }
 
         /// <summary>
-        /// Draws dotted line between <paramref name="a"/> and <paramref name="b"/>, used for drawing of closest points.
+        /// Draws dotted line between two points, used for drawing of closest points.
         /// </summary>
         /// <param name="g"></param>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
-        private void connectPoints(Graphics g, CanvasPoint a, CanvasPoint b) {
-            Pen p = new Pen(Color.Green, 3);
+        private void connectPoints(Graphics g, Vector A, Vector B, Pen p) {
+            CanvasPoint a = new CanvasPoint((float)A.X, (float)A.Y);
+            CanvasPoint b = new CanvasPoint((float)B.X, (float)B.Y);
             p.DashStyle = DashStyle.Dash;
             g.DrawLine(p, a, b);
-            g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(a.X) - 5, (int)Math.Round(a.Y) - 5, 10, 10));
-            g.FillEllipse(new SolidBrush(Color.Green), new Rectangle((int)Math.Round(b.X) - 5, (int)Math.Round(b.Y) - 5, 10, 10));
+            g.FillEllipse(new SolidBrush(p.Color), new Rectangle((int)Math.Round(a.X) - 5, (int)Math.Round(a.Y) - 5, 10, 10));
+            g.FillEllipse(new SolidBrush(p.Color), new Rectangle((int)Math.Round(b.X) - 5, (int)Math.Round(b.Y) - 5, 10, 10));
         }
 
         /// <summary>
@@ -409,31 +462,193 @@ namespace GJK {
         /// <param name="A">Convex object</param>
         /// <param name="B">Convex object</param>
         /// <param name="W">Initial simplex</param>
-        /// <returns>touching vector</returns>
-        public Vector ProximityGJK(Polyline A, Polyline B, Simplex W) {
+        public GJKOutput ProximityGJK(Polyline A, Polyline B, Simplex W) {
             Vector v = new Vector(1, 0);
+            GJKOutput result;
             double delta = 0;
-
             Vector w = new Vector(A.points.First().X, A.points.First().Y);
-            Vector normalizedV = v;
-            normalizedV.Normalize();
-            while (normalizedV * normalizedV - delta > -0.1) {
-                v = ClosestPoint(W);
-                normalizedV = v;
-                if (normalizedV.X != 0 && normalizedV.Y != 0) {
-                    normalizedV.Normalize();
+            Simplex old = new Simplex();
+            int i = 0;
+            bool start = true;
+
+            while (Vector.Multiply(v, v) - delta > 0.1 || (v.X == 0 && v.Y == 0)) {
+                i++;
+                if (!start) {
+                    v = ClosestPoint(W);
                 }
-                w = SupportHC(A, v) - SupportHC(B, -v);  // JE v A -v SPRAVNE?
-                W = BestSimplex(W, w);  // Namiesto tohoto, proste pridat vertex a ked je dlzky 3, testovat ci je kolizia? "Simplex.contains(ORIGIN)"
-                // TODO skusit si nakreslit BestSimplex s konkretnymi bodmi a odkrokovat...
-                if (Vector.Multiply(v, w) > 0) {
-                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / (normalizedV * normalizedV)));
+                Vector supportA = SupportHC(A, v);
+                Vector supportB = SupportHC(B, -v);
+
+                w = supportA - supportB;
+                ShapePoint sp = new ShapePoint();
+                sp.S1 = supportA;
+                sp.S2 = supportB;
+                sp.MinkowskiPoint = w;
+                W = BestSimplex(W, sp);
+
+                if (W.count == 3 || (w.X == 0 && w.Y == 0) || (i > 10000 && old == W)) {
+                    Pair<Vector, double> epa = computeEPA(A, B, W);
+                    result.Collision = true;
+                    result.Distance = epa.Second;
+
+                    result.closestFeatures = new Pair<Vector, Vector>();
+                    result.touchingVector = new Vector();
+                    result.touchingVectorPoints = new Pair<Vector, Vector>();
+                    return result;
                 }
-                label3.Text = label3.Text + w.X.ToString() + "," + w.Y.ToString() + " | ";
+                if (Vector.Multiply(v, w) > 0 && !start) {
+                    delta = Math.Max(delta, ((Vector.Multiply(v, w) * Vector.Multiply(v, w)) / Vector.Multiply(v, v)));
+                }
+                start = false;
+                old = W;
             }
-            label1.Text = "X: " + w.X.ToString();
-            label2.Text = "Y: " + w.Y.ToString();
-            return w;
+            result.Collision = false;
+            result.Distance = v.Length;
+            result.closestFeatures = getClosestFeatures(W);
+            result.touchingVector = w;
+            result.touchingVectorPoints = getTouchingVectorPoints(W, w);
+            return result; 
+        }
+
+        /// <summary>
+        /// (Expanding Polytope Algorithm) Used to compute penetration depth and normal vector of closest edge to origin.
+        /// </summary>
+        /// <param name="A">Convex object</param>
+        /// <param name="B">Convex object</param>
+        /// <param name="W">Initial simplex</param>
+        public Pair<Vector, double> computeEPA(Polyline A, Polyline B, Simplex W) {
+
+            int winding = 0;
+            double a = (W.B.MinkowskiPoint.X - W.A.MinkowskiPoint.X) * (W.B.MinkowskiPoint.Y + W.A.MinkowskiPoint.Y);
+            double b = (W.C.MinkowskiPoint.X - W.B.MinkowskiPoint.X) * (W.C.MinkowskiPoint.Y + W.B.MinkowskiPoint.Y);
+            double c = (W.A.MinkowskiPoint.X - W.C.MinkowskiPoint.X) * (W.A.MinkowskiPoint.Y + W.C.MinkowskiPoint.Y);
+            double sumOverEdges = a + b + c;
+            if (sumOverEdges < 0) {
+                winding = 1;
+            }
+
+            List<Vector> simplex = new List<Vector>();
+            simplex.Add(W.A.MinkowskiPoint);
+            simplex.Add(W.B.MinkowskiPoint);
+            simplex.Add(W.C.MinkowskiPoint);
+            while (true) {
+                Edge e = findClosestEdge(simplex, winding);
+                Vector normal = new Vector(-(e.B.Y - e.A.Y), e.B.Y - e.A.Y);
+                Vector p = SupportHC(A, -e.normal) - SupportHC(B, e.normal);
+                double d = Vector.Multiply(p, e.normal);
+                Vector length = new Vector(Math.Abs(e.A.X - e.B.X), Math.Abs(e.A.Y - e.B.Y));
+                if (d - e.distance < 0.001) {
+                    Pair<Vector, double>  result = new Pair<Vector, double>();
+                    result.First = e.normal;
+                    result.Second = d;
+                    return result;
+                }
+                else {
+                    simplex.Insert(e.index, p);
+                }
+            }
+        }
+        /// <summary>
+        ///  Obtains the edge closest to the origin on the Minkowski Difference.
+        /// </summary>
+        /// <param name="simplex"></param>
+        /// <param name="winding"></param>
+        /// <returns></returns>
+        public Edge findClosestEdge(List<Vector> simplex, int winding) {
+            Edge closest = new Edge();
+            for (int i = 0; i < simplex.Count; i++) {
+                int j = i + 1 == simplex.Count ? 0 : i + 1;
+                Vector a = simplex[i];
+                Vector b = simplex[j];
+                Vector e = b - a;
+                Vector oa = a;
+                Vector n;
+                if (winding == 0) {
+                    n = new Vector(e.Y, -e.X);
+                }
+                else {
+                    n = new Vector(-e.Y, e.X);
+                }
+                //Vector n = tripleProduct(e, oa, e);
+                n.Normalize();
+                double d = Vector.Multiply(n, a);
+                if (d < closest.distance) {
+                    closest.distance = d;
+                    closest.normal = n;
+                    closest.index = j;
+                }
+            }
+            return closest;
+        }
+
+        /// <summary>
+        /// Computes (A x B) x C = B(C.dot(A)) – A(C.dot(B))
+        /// </summary>
+        /// <param name="A"></param>
+        /// <param name="B"></param>
+        /// <param name="C"></param>
+        /// <returns></returns>
+        public Vector tripleProduct(Vector A, Vector B, Vector C) {
+            double AdotC = Vector.Multiply(A, C);
+            double BdotC = Vector.Multiply(B, C);
+            Vector left = B * AdotC;
+            Vector right = A * BdotC;
+            return left - right;
+        }
+
+        public Pair<Vector, Vector> getTouchingVectorPoints(Simplex W, Vector w) {
+            Pair<Vector, Vector> result = new Pair<Vector, Vector>();
+            if (W.A.MinkowskiPoint == w) {
+                result.First = W.A.S1;
+                result.Second = W.A.S2;
+            }
+            else if (W.B.MinkowskiPoint == w) {
+                result.First = W.B.S1;
+                result.Second = W.B.S2;
+            }
+            return result;
+        }
+
+
+        /// <summary>
+        /// Finds closest points on polygons when they are not colliding, using conves combination.
+        /// </summary>
+        /// <param name="W"></param>
+        /// <returns></returns>
+        public Pair<Vector, Vector> getClosestFeatures(Simplex W) {
+            Pair<Vector, Vector> result = new Pair<Vector, Vector>();
+
+            if (W.count == 1) {
+                result.First = W.A.S1;
+                result.Second = W.A.S2;
+                return result;
+            }
+            Vector L = W.B.MinkowskiPoint - W.A.MinkowskiPoint;
+            double LdotL = Vector.Multiply(L, L);
+            double LdotA = Vector.Multiply(L, W.A.MinkowskiPoint);
+            double Lambda2 = -LdotA / LdotL;
+            double Lambda1 = 1 - Lambda2;
+
+            Vector AClosest = Vector.Multiply(Lambda1, W.A.S1) + Vector.Multiply(Lambda2, W.B.S1);
+            Vector BClosest = Vector.Multiply(Lambda1, W.A.S2) + Vector.Multiply(Lambda2, W.B.S2);
+
+            if (Lambda1 < 0) {
+                AClosest = W.B.S1;
+                BClosest = W.A.S2;
+            }
+            else if (Lambda2 < 0) {
+                AClosest = W.A.S1;
+                BClosest = W.B.S2;
+            }
+            if (L.X == 0 && L.Y == 0) {
+                AClosest = W.A.S1;
+                BClosest = W.A.S2;
+            }
+
+            result.First = AClosest;
+            result.Second = BClosest;
+
+            return result;
         }
 
         /// <summary>
@@ -444,16 +659,24 @@ namespace GJK {
         public Vector ClosestPoint(Simplex W) {
             Vector d = new Vector();
             if (W.count >= 2) {
-                d = W.B - W.A;
+                d = W.B.MinkowskiPoint - W.A.MinkowskiPoint;
             }
 
             switch (W.count) {
                 case 0:
                     return new Vector(0, 0);
                 case 1:
-                    return W.A;
+                    return W.A.MinkowskiPoint;
                 case 2:
-                    return W.A - (((d * W.A) / (d * d)) * d);
+                    return W.A.MinkowskiPoint - (((d * W.A.MinkowskiPoint) / (d * d)) * d);
+                case 3: {
+                        Vector3 W1 = new Vector3((float)W.A.MinkowskiPoint.X, (float)W.A.MinkowskiPoint.Y, 0);
+                        Vector3 W2 = new Vector3((float)W.B.MinkowskiPoint.X, (float)W.B.MinkowskiPoint.Y, 0);
+                        Vector3 W3 = new Vector3((float)W.C.MinkowskiPoint.X, (float)W.C.MinkowskiPoint.Y, 0);
+                        Vector3 n = Vector3.Cross((W2 - W1), (W3 - W1));
+                        Vector3 result = Vector3.Multiply(((Vector3.Multiply(n, W1)) / (Vector3.Multiply(n, n))), n);
+                        return new Vector(result.X, result.Y);
+                    }
             }
             return new Vector(0, 0);
         }
@@ -466,7 +689,7 @@ namespace GJK {
         /// <param name="d">Direction vector</param>
         /// <param name="w">Initial support vertex</param>
         /// <returns>New support vertex with minimal projection <paramref name="w"/></returns>
-        public Vector SupportHC(Polyline A, Vector d) {  // TODO pamatat si visited?
+        public Vector SupportHC(Polyline A, Vector d) {
             Vector w = new Vector(A.points.First().X, A.points.First().Y);
             double u = Vector.Multiply(d, w);
             bool found = false;
@@ -485,7 +708,12 @@ namespace GJK {
             return w;
         }
 
-
+        /// <summary>
+        /// Finds two neighbours of given vector (point <paramref name="v"/>) on polyline <paramref name="A"/>
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="A"></param>
+        /// <returns></returns>
         public List<CanvasPoint> getNeighbours(Vector v, Polyline A) {
             CanvasPoint first = A.points.First();
             CanvasPoint last = A.points.Last();
@@ -506,18 +734,48 @@ namespace GJK {
             return result;
         }
 
+        private Vector ClosestToSegment(Vector pt, Vector p1, Vector p2) {
+            Vector closest = new Vector();
+            double dx = p2.X - p1.X;
+            double dy = p2.Y - p1.Y;
+            if ((dx == 0) && (dy == 0)) {
+                // It's a point not a line segment.
+                closest = p1;
+                return closest;
+            }
+
+            // Calculate the t that minimizes the distance.
+            double t = ((pt.X - p1.X) * dx + (pt.Y - p1.Y) * dy) / (dx * dx + dy * dy);
+
+            // See if this represents one of the segment's
+            // end points or a point in the middle.
+            if (t < 0) {
+                closest = new Vector(p1.X, p1.Y);
+                dx = pt.X - p1.X;
+                dy = pt.Y - p1.Y;
+            }
+            else if (t > 1) {
+                closest = new Vector(p2.X, p2.Y);
+                dx = pt.X - p2.X;
+                dy = pt.Y - p2.Y;
+            }
+            else {
+                closest = new Vector(p1.X + t * dx, p1.Y + t * dy);
+                dx = pt.X - closest.X;
+                dy = pt.Y - closest.Y;
+            }
+
+            return closest;
+        }
+
         /// <summary>
         /// Form new simplex and test in which external Voronoi region the origin lies.
         /// </summary>
         /// <param name="W">Simplex</param>
         /// <param name="w">New point in CSO surface</param>
         /// <returns>New smallest simplex <paramref name="W"/> containing <paramref name="w"/> and closest point to origin.</returns>
-        public Simplex BestSimplex(Simplex W, Vector w) {  // TODO test and debug this shit
+        public Simplex BestSimplex(Simplex W, ShapePoint w) {
             Simplex result = new Simplex();
-            Vector d = w;
-            Vector e1 = W.A - w;
-            Vector e2 = W.B - w;
-            d.Negate();
             switch (W.count) {
                 case 0: {
                         result.A = w;
@@ -525,7 +783,12 @@ namespace GJK {
                         break;
                     }
                 case 1: {
-                        if ((Vector.Multiply(d, e1)) < 0) {
+                        Simplex line = new Simplex();
+                        line.A = w;
+                        line.B = W.A;
+                        line.count = 2;
+                        Vector closest = ClosestToSegment(new Vector(0, 0), w.MinkowskiPoint, W.A.MinkowskiPoint);
+                        if (closest == w.MinkowskiPoint) {
                             result.A = w;
                             result.count = 1;
                         }
@@ -537,26 +800,23 @@ namespace GJK {
                         break;
                     }
                 case 2: {
-                        Vector3D e1_3D = new Vector3D();
-                        e1_3D.X = e1.X;
-                        e1_3D.Y = e1.Y;
-                        e1_3D.Z = 0;
-                        Vector3D e2_3D = new Vector3D();
-                        e2_3D.X = e2.X;
-                        e2_3D.Y = e2.Y;
-                        e2_3D.Z = 0;
-                        Vector3D u1 = crossProduct(e1_3D, crossProduct(e1_3D, e2_3D));
-                        Vector3D v1 = crossProduct(crossProduct(e1_3D, e2_3D), e2_3D);
-                        if ((d.X * e1.X + d.Y * e1.Y) < 0 && (d.X * e2.X + d.Y * e2.Y) < 0) {
+                        Vector d = new Vector(0, 0) - w.MinkowskiPoint; // d.negate(); AO = O - A; O = origin (0, 0)
+                        Vector e1 = W.A.MinkowskiPoint - w.MinkowskiPoint; // AB = B - A
+                        Vector e2 = W.B.MinkowskiPoint - w.MinkowskiPoint;
+                        Vector3 e1_3D = new Vector3((float)e1.X, (float)e1.Y, 0);
+                        Vector3 e2_3D = new Vector3((float)e2.X, (float)e2.Y, 0);
+                        Vector3 u1 = Vector3.Cross(e1_3D, Vector3.Cross(e1_3D, e2_3D));
+                        Vector3 v1 = Vector3.Cross(Vector3.Cross(e1_3D, e2_3D), e2_3D);
+                        if (Vector.Multiply(d, e1) < 0 && Vector.Multiply(d, e2) < 0) {
                             result.A = w;
                             result.count = 1;
                         }
-                        else if ((d.X * e1.X + d.Y * e1.Y) > 0 && (d.X * u1.X + d.Y * u1.Y + 0 * u1.Z) > 0) {
+                        else if (Vector.Multiply(d, e1) > 0 && (d.X * u1.X + d.Y * u1.Y + 0 * u1.Z) > 0) {
                             result.A = W.A;
                             result.B = w;
                             result.count = 2;
                         }
-                        else if ((d.X * e2.X + d.Y * e2.Y) > 0 && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z) > 0) {
+                        else if (Vector.Multiply(d, e2) > 0 && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z) > 0) {
                             result.A = W.B;
                             result.B = w;
                             result.count = 2;
@@ -565,36 +825,16 @@ namespace GJK {
                         else if ((d.X * u1.X + d.Y * u1.Y + 0 * u1.Z < 0) && (d.X * v1.X + d.Y * v1.Y + 0 * v1.Z < 0)) {
                             result.A = W.A;
                             result.B = W.B;
-                            result.C = w; // Added
+                            result.C = w;
                             result.count = 3;
+                        }
+                        else {
+                            result = W;
                         }
                         break;
                     }
             }
-            //result.count = 3; //Preco?
             return result;
-        }
-
-        public Vector3D crossProduct(Vector3D a, Vector3D b) {
-            Vector3D result = new Vector3D();
-            result.X = a.Y * b.Z - a.Z * b.Y;
-            result.Y = a.Z * b.X - a.X * b.Z;
-            result.Z = a.X * b.Y - a.Y * b.X;
-            return result;
-        }
-
-        private void label1_Click(object sender, EventArgs e) {
-
-        }
-
-        private void button1_Click(object sender, EventArgs e) {
-            Simplex s = new Simplex();
-            s.count = 0;
-            ProximityGJK(objects[0], objects[1], s);
-        }
-
-        private void label2_Click(object sender, EventArgs e) {
-
         }
     }
 
@@ -603,14 +843,29 @@ namespace GJK {
     /// Simplex data structure. Represents <0-2> simplexes.
     /// </summary>
     public class Simplex {
+        public ShapePoint A;
+        public ShapePoint B;
+        public ShapePoint C;
+        public int count;
+
+        public Simplex() {
+            A = new ShapePoint();
+            B = new ShapePoint();
+            C = new ShapePoint();
+        }
+    }
+
+    public class ShapePoint {
+        public Vector S1;
+        public Vector S2;
+        public Vector MinkowskiPoint;
+    }
+
+    public class Edge {
         public Vector A;
         public Vector B;
-        public Vector C;
-        public int count;
-    }
-    public class Vector3D {
-        public double X;
-        public double Y;
-        public double Z;
+        public int index;
+        public Vector normal;
+        public double distance = Double.MaxValue;
     }
 }
